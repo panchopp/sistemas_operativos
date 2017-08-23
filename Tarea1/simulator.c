@@ -140,7 +140,7 @@ Node* find_and_pop_min_in_queue(Queue* queue){
             queue -> first = NULL;
             queue -> last = NULL;
         }
-        
+
     }
 
     else{
@@ -196,7 +196,7 @@ void scheduler(Queue* Q_ready, Queue* Q_waiting, Queue* Q_terminated, const char
   CPU -> start_time_in_cpu = t;
   while (Q_ready -> first != NULL && Q_waiting -> first != NULL){ // Se va a caer cuando el ultimo proceso este en la CPU
     int remaining_time_CPU = (CPU -> tareas[CPU -> pos_tarea_actual] + CPU -> start_time_in_cpu) - t;
-    Process* first_waiting = Q_waiting -> first;
+    Process* first_waiting = Q_waiting -> first -> proceso;
     int remaining_time_Q_waiting = (first_waiting -> tareas[first_waiting -> pos_tarea_actual] + first_waiting -> start_time_in_waiting) - t;
 
     // Si proxima tarea es sacar de la CPU
@@ -276,12 +276,14 @@ int main(int argc, char const *argv[]) {
         state = 2;
       }
       Process* proceso = process_init(pid, name, state, priority, N, tareas);
-      if (proceso -> state == 1){
-        push_queue(Q_ready, proceso);
-      }
-      if (proceso -> state == 2){
-        push_queue(Q_waiting, proceso);
-      }
+
+      push_queue(Q_ready, proceso);
+      // if (proceso -> state == 1){
+      //   push_queue(Q_ready, proceso);
+      // }
+      // if (proceso -> state == 2){
+      //   push_queue(Q_waiting, proceso);
+      // }
       pid += 1;
     }
   }
@@ -292,6 +294,16 @@ int main(int argc, char const *argv[]) {
   else{
     quantum = 0;
   }
+
+  printf("%s\n", "blablabalbal");
+
+  Queue* queue_ordenada = sort_by_priority(Q_ready);
+
+  Node* proximo = queue_ordenada -> first;
+  while(proximo != NULL){
+  printf("%d\n", proximo -> proceso -> priority);
+  proximo = proximo -> next;
+}
 
   //scheduler(Q_ready, Q_waiting, Q_terminated, scheduler_type);
 
