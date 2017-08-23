@@ -111,39 +111,60 @@ Process* pop_queue(Queue* queue){
   }
 }
 
-void sort(Process* array[4], int size){
-
-    int i;
-    Process *array_pointer;
-    Process *moving_pointer;
-    Process *max_pointer;
-    int max;
-    int max_i;
-
-    while(size > 0){
-
-        max_pointer = *array;
-        array_pointer = *array;
-        max = -276447232;
-
-        for(i = 0; i < size; i++){
-            moving_pointer = array[i];
-            if( moving_pointer -> priority >= max) {
-                max = moving_pointer -> priority;
-                max_pointer = moving_pointer;
-                max_i = i;
-            }
+Node* find_and_pop_min_in_queue(Queue* queue){
+    Node* next = queue -> first;
+    int min = next -> proceso -> priority;
+    Node* node_min = next;
+    int min_is_first = 1;
+    Node* node_before_min;
+    Node* actual_node;
+    while (next != NULL){
+        if(next -> proceso -> priority < min){
+            min = next -> proceso -> priority;
+            node_min = next;
+            node_before_min = actual_node;
+            min_is_first = 0;
         }
 
-        if (max_i != size - 1){
-            Process aux = *array[size-1];
-            array[size-1] = max_pointer;
-            array[max_i] = &aux;
-        }
-
-        size--;
+        actual_node = next;
+        next = next -> next;
 
     }
+
+    /* borro minimo de lista */
+    if (min_is_first == 1){
+        if (queue -> first -> next){
+            queue -> first = queue -> first -> next;
+        }
+        else{
+            queue -> first = NULL;
+            queue -> last = NULL;
+        }
+        
+    }
+
+    else{
+        node_before_min -> next = node_min -> next;
+    }
+
+    return node_min;
+}
+
+Queue* sort_by_priority(Queue* queue){
+    Node* next = queue -> first;
+    Queue* queue_ordenada = queue_init();
+    Node* node_max_priority;
+
+    while (next != NULL){
+        node_max_priority = find_and_pop_min_in_queue(queue);
+        push_queue(queue_ordenada, node_max_priority -> proceso);
+        if (next -> next == NULL){
+            push_queue(queue_ordenada, next -> proceso);
+        }
+        next = next -> next;
+    }
+
+    return queue_ordenada;
 
 }
 
