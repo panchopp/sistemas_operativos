@@ -190,26 +190,36 @@ void scheduler(Queue* Q_ready, Queue* Q_waiting, Queue* Q_terminated, const char
   int t = 0;
   CPU = pop_queue(Q_ready);
   CPU -> start_time_in_cpu = t;
+  CPU -> num_veces_elegido += 1;
   while (Q_ready -> first != NULL && Q_waiting -> first != NULL){ // Se va a caer cuando el ultimo proceso este en la CPU
     int remaining_time_CPU = (CPU -> tareas[CPU -> pos_tarea_actual] + CPU -> start_time_in_cpu) - t;
     Process* first_waiting = Q_waiting -> first -> proceso;
-    int remaining_time_Q_waiting = (first_waiting -> tareas[first_waiting -> pos_tarea_actual] + first_waiting -> start_time_in_waiting) - t;
+    int remaining_time_first_waiting = (first_waiting -> tareas[first_waiting -> pos_tarea_actual] + first_waiting -> start_time_in_waiting) - t;
 
-    // Si proxima tarea es sacar de la CPU
-    if (remaining_time_CPU < remaining_time_Q_waiting) {
+    // Si proxima accion es sacar de la CPU
+    if (remaining_time_CPU < remaining_time_first_waiting) {
       t += remaining_time_CPU;
       CPU -> start_time_in_waiting = t;
-      push_queue(Q_waiting, CPU);
+      CPU -> pos_tarea_actual += 1;
+      // Si se acabaron las tareas, se va a terminated, sino a waiting
+      if (2*(CPU -> N) - 1 == CPU -> pos_tarea_actual){
+        push_queue(Q_terminated, CPU);
+      }
+      else{
+        push_queue(Q_waiting, CPU);
+      }
       if (Q_ready -> first != NULL){
         CPU = pop_queue(Q_ready);
         CPU -> start_time_in_cpu = t;
-
+        CPU -> num_veces_elegido += 1;
       }
-    } // Si proxima tarea es mover desde waiting a ready
-    else if (remaining_time_CPU > remaining_time_Q_waiting){
-      t += remaining_time_Q_waiting;
+    } // Si proxima accion es mover desde waiting a ready
+    else if (remaining_time_CPU > remaining_time_first_waiting){
+      t += remaining_time_first_waiting;
       Process* poped = pop_queue(Q_waiting);
+      poped -> pos_tarea_actual += 1;
       poped -> start_time_in_ready = t;
+      poped -> num_veces_bloqueado += 1;
       push_queue(Q_ready, poped);
     }
 
