@@ -14,6 +14,10 @@ struct Process
   int num_veces_elegido;
   int num_veces_bloqueado;
 
+  int start_time_in_cpu;
+  int start_time_in_waiting;
+  int start_time_in_ready;
+
   int start_turnaround_time;
   int start_response_time;
   int start_waiting_time;
@@ -143,26 +147,72 @@ void sort(Process* array[4], int size){
 
 }
 
+void FCFS() // Tipo 1
+{
 
-void load_processes_from_file(char* filename){
+
+}
+
+void round_robin() // Tipo 2
+{
 
 
 }
 
-void FCFS(){
+void priority_based() // Tipo 3
+{
 
 
 }
+
+void scheduler(Queue* Q_ready, Queue* Q_waiting, Queue* Q_terminated, const char* tipo){
+
+  // Ordenar segun tipo
+  Process* CPU;
+
+  int t = 0;
+  CPU = pop_queue(Q_ready);
+  CPU -> start_time_in_cpu = t;
+  while (Q_ready -> first != NULL && Q_waiting -> first != NULL){ // Se va a caer cuando el ultimo proceso este en la CPU
+    int remaining_time_CPU = (CPU -> tareas[CPU -> pos_tarea_actual] + CPU -> start_time_in_cpu) - t;
+    Process* first_waiting = Q_waiting -> first;
+    int remaining_time_Q_waiting = (first_waiting -> tareas[first_waiting -> pos_tarea_actual] + first_waiting -> start_time_in_waiting) - t;
+
+    // Si proxima tarea es sacar de la CPU
+    if (remaining_time_CPU < remaining_time_Q_waiting) {
+      t += remaining_time_CPU;
+      CPU -> start_time_in_waiting = t;
+      push_queue(Q_waiting, CPU);
+      if (Q_ready -> first != NULL){
+        CPU = pop_queue(Q_ready);
+        CPU -> start_time_in_cpu = t;
+      }
+      else if (remaining_time_CPU > remaining_time_Q_waiting){
+        t += remaining_time_Q_waiting;
+        Process* poped = pop_queue(Q_waiting);
+        poped -> start_time_in_ready = t;
+        push_queue(Q_ready, poped);
+
+      }
+
+    }
+
+
+  }
+
+
+}
+
+
 
 
 int main(int argc, char const *argv[]) {
-
   const char* scheduler_type;
   const char* file_name;
   int quantum;
   Queue* Q_ready = queue_init();
   Queue* Q_waiting = queue_init();
-
+  Queue* Q_terminated = queue_init();
   FILE* file;
   if (argv[1]){
     scheduler_type = argv[1];
@@ -170,7 +220,6 @@ int main(int argc, char const *argv[]) {
   if (argv[2]){
     file_name = argv[2];
     file = fopen(file_name, "r");
-
     int pid = 0;
 
     while (1){
@@ -181,9 +230,6 @@ int main(int argc, char const *argv[]) {
       int state = 1; // 0: Running, 1: Ready, 2: Waiting
 
       char word[1024];
-      while (1){
-
-      }
       // Chequea si se acabaron los procesos por leer.
       if(fscanf(file, " %1023s", word) != 1){
         break;
@@ -204,6 +250,7 @@ int main(int argc, char const *argv[]) {
       for(int i = 0; i < 2*N-1; i++){
         fscanf(file, " %1023s", word);
         tareas[i] = atoi(word);
+        printf("%s\n", word);
       }
       if (initial_time > 0){
         state = 2;
@@ -219,8 +266,6 @@ int main(int argc, char const *argv[]) {
     }
   }
 
-
-
   if (argv[3]){
     quantum = atoi(argv[3]);
   }
@@ -228,7 +273,7 @@ int main(int argc, char const *argv[]) {
     quantum = 0;
   }
 
-
+  //scheduler(Q_ready, Q_waiting, Q_terminated, scheduler_type);
 
   return 0;
 }
