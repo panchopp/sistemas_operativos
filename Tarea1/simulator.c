@@ -164,6 +164,16 @@ Queue* sort_by_priority(Queue* queue){
 
 }
 
+int len_queue(Queue* queue){
+  Node* next = queue -> first;
+  int largo = 0;
+  while (next != NULL){
+    largo ++;
+    next = next -> next;
+  }
+  return largo;
+}
+
 void FCFS() // Tipo 1
 {
 
