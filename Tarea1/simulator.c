@@ -207,15 +207,14 @@ void scheduler(Queue* Q_ready, Queue* Q_waiting, Queue* Q_terminated, const char
       if (Q_ready -> first != NULL){
         CPU = pop_queue(Q_ready);
         CPU -> start_time_in_cpu = t;
-      }
-      else if (remaining_time_CPU > remaining_time_Q_waiting){
-        t += remaining_time_Q_waiting;
-        Process* poped = pop_queue(Q_waiting);
-        poped -> start_time_in_ready = t;
-        push_queue(Q_ready, poped);
 
       }
-
+    } // Si proxima tarea es mover desde waiting a ready
+    else if (remaining_time_CPU > remaining_time_Q_waiting){
+      t += remaining_time_Q_waiting;
+      Process* poped = pop_queue(Q_waiting);
+      poped -> start_time_in_ready = t;
+      push_queue(Q_ready, poped);
     }
 
 
