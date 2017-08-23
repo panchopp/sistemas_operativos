@@ -140,7 +140,7 @@ Node* find_and_pop_min_in_queue(Queue* queue){
             queue -> first = NULL;
             queue -> last = NULL;
         }
-
+        
     }
 
     else{
@@ -151,17 +151,13 @@ Node* find_and_pop_min_in_queue(Queue* queue){
 }
 
 Queue* sort_by_priority(Queue* queue){
-    Node* next = queue -> first;
     Queue* queue_ordenada = queue_init();
     Node* node_max_priority;
 
-    while (next != NULL){
+    while (queue -> last != NULL){
+
         node_max_priority = find_and_pop_min_in_queue(queue);
         push_queue(queue_ordenada, node_max_priority -> proceso);
-        if (next -> next == NULL){
-            push_queue(queue_ordenada, next -> proceso);
-        }
-        next = next -> next;
     }
 
     return queue_ordenada;
