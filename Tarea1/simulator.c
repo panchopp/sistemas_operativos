@@ -174,6 +174,22 @@ int len_queue(Queue* queue){
   return largo;
 }
 
+void find_parameter_processes_in_queue(Queue* queue, char* parameter){
+  Node* next = queue -> first;
+  char* p = "priority";
+  char* nve = "num_veces_elegido";
+  while (next != NULL){
+    if (parameter == p){
+      printf("%d\n", next -> proceso -> priority);
+    }
+    if (parameter == nve){
+      printf("%d\n", next -> proceso -> num_veces_elegido);    
+    }
+
+    next = next -> next;
+  }
+}
+
 void FCFS() // Tipo 1
 {
 
@@ -315,11 +331,8 @@ int main(int argc, char const *argv[]) {
 
   Queue* queue_ordenada = sort_by_priority(Q_ready);
 
-  Node* proximo = queue_ordenada -> first;
-  while(proximo != NULL){
-  printf("%d\n", proximo -> proceso -> priority);
-  proximo = proximo -> next;
-}
+  char* parametro = "priority";
+  find_parameter_processes_in_queue(queue_ordenada, parametro);
 
   //scheduler(Q_ready, Q_waiting, Q_terminated, scheduler_type);
 
