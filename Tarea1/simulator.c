@@ -3,6 +3,7 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <math.h>
 
 void INThandler(int);
 
@@ -84,6 +85,11 @@ Queue* queue_init()
     ret->last = NULL;
     return ret;
 }
+
+Queue* Q_ready;
+Queue* Q_waiting;
+Queue* Q_terminated;
+int t;
 
 void free_queue(Queue* queue){
   //Pendiente
@@ -196,7 +202,6 @@ Queue* sort_by_priority(Queue* queue){
         node_max_priority = find_and_pop_min_in_queue(queue);
         push_queue(queue_ordenada, node_max_priority -> proceso);
     }
-
     return queue_ordenada;
 
 }
@@ -298,7 +303,45 @@ void ready_up_waiters(Queue* q_waiting, Queue* q_ready, int t, int minimo_espera
             }
             actual_node -> proceso -> pos_tarea_actual ++;
             actual_node -> proceso -> start_time_in_ready = t + minimo_espera;
-            print_queue(q_ready);
+            push_queue(q_ready, actual_node -> proceso);
+
+
+        }
+        else{
+          previous = actual_node;
+        }
+      actual_node = actual_node -> next;
+    }
+}
+
+void ready_up_waitersrr(Queue* q_waiting, Queue* q_ready, int t, int minimo_espera){
+    Node* actual_node = q_waiting -> first;
+    Node* previous = NULL;
+    while (actual_node != NULL){
+
+        if (actual_node -> proceso -> tareas[actual_node -> proceso -> pos_tarea_actual] - t + actual_node -> proceso -> start_time_in_waiting == minimo_espera){
+            /* borrar elemento */
+
+            if (previous == NULL){
+                if (q_waiting -> first -> next){
+                    q_waiting -> first = q_waiting -> first -> next;
+                }
+                else{
+                    q_waiting -> first = NULL;
+                    q_waiting -> last = NULL;
+                }
+            }
+            else{
+                previous -> next = actual_node -> next;
+            }
+
+            /* agregar elemento a ready */
+            if (actual_node -> proceso -> pos_tarea_actual == 0){
+              printf("Proceso %s creado\n", actual_node -> proceso -> name);
+              actual_node -> proceso -> start_turnaround_time = t + minimo_espera;
+            }
+            actual_node -> proceso -> pos_tarea_actual ++;
+            actual_node -> proceso -> start_time_in_ready = t + minimo_espera;
             push_queue(q_ready, actual_node -> proceso);
 
 
@@ -313,12 +356,12 @@ void ready_up_waiters(Queue* q_waiting, Queue* q_ready, int t, int minimo_espera
 
 void FCFS(Queue* Q_ready, Queue* Q_waiting, Queue* Q_terminated) // Tipo 1
 {
-  int t = 0;
+  extern int t;
+  t = 0;
   Process* CPU = NULL;
 
   while (Q_ready -> first != NULL || Q_waiting -> first != NULL || CPU != NULL){ // Se va a caer cuando el ultimo proceso este en la CPU
     if (CPU == NULL){
-      print_queue(Q_ready);
       if (Q_ready -> first != NULL){
         CPU = pop_queue(Q_ready);
         CPU -> start_time_in_cpu = t;
@@ -396,17 +439,149 @@ void FCFS(Queue* Q_ready, Queue* Q_waiting, Queue* Q_terminated) // Tipo 1
 
       }
     }
-    printf("\n");
-    printf("\n");
-    printf("T = %i\n", t);
-    print_queue(Q_waiting);
-    print_queue(Q_ready);
-    print_queue(Q_terminated);
-    if (CPU != NULL){
-      printf("CPU: %s\n", CPU -> name);
+  }
+  printf("-----Simulacion terminada-----\n");
+  printf("%i procesos han terminado su ejecucion\n", len_queue(Q_terminated));
+  printf("La simulacion duro %i\n", t);
+  printf("Para cada proceso: \n");
+  find_parameter_processes_in_queue(Q_terminated, "num_veces_elegido");
+  find_parameter_processes_in_queue(Q_ready, "num_veces_elegido");
+  find_parameter_processes_in_queue(Q_waiting, "num_veces_elegido");
+  find_parameter_processes_in_queue(Q_terminated, "num_veces_bloqueado");
+  find_parameter_processes_in_queue(Q_ready, "num_veces_bloqueado");
+  find_parameter_processes_in_queue(Q_waiting, "num_veces_bloqueado");
+  find_parameter_processes_in_queue(Q_terminated, "turnaround_time");
+  find_parameter_processes_in_queue(Q_terminated, "response_time");
+  find_parameter_processes_in_queue(Q_ready, "response_time");
+  find_parameter_processes_in_queue(Q_waiting, "response_time");
+  find_parameter_processes_in_queue(Q_terminated, "waiting_time");
+  find_parameter_processes_in_queue(Q_ready, "waiting_time");
+  find_parameter_processes_in_queue(Q_waiting, "waiting_time");
+
+}
+
+double q(int p, int q){
+  int pk;
+  double Q;
+  pk = (p * q) + (pow(-1,round(p/q)) * p);
+  Q = pk/64;
+  return Q;
+}
+
+
+void RR(Queue* Q_ready, Queue* Q_waiting, Queue* Q_terminated, int q_entregado) // Tipo 1
+{
+  extern int t;
+  t = 0;
+  Process* CPU = NULL;
+  int L;
+
+  while (Q_ready -> first != NULL || Q_waiting -> first != NULL || CPU != NULL){ // Se va a caer cuando el ultimo proceso este en la CPU
+    if (CPU == NULL){
+      if (Q_ready -> first != NULL){
+        CPU = pop_queue(Q_ready);
+        CPU -> start_time_in_cpu = t;
+        CPU -> num_veces_elegido += 1;
+        if (CPU -> tareas[CPU -> pos_tarea_actual] <= q(CPU -> priority, q_entregado)){
+          L = CPU -> tareas[CPU -> pos_tarea_actual];
+          CPU -> tareas[CPU -> pos_tarea_actual] = 0;
+        }
+        else{
+          CPU -> tareas[CPU -> pos_tarea_actual] -= q(CPU -> priority, q_entregado);
+          L = q(CPU -> priority, q_entregado);
+        }
+
+        if (CPU -> num_veces_elegido == 1){
+          CPU -> end_response_time = t;
+        }
+      }
+      else{
+        int minimo_tiempo_waiting = find_min_waiting_time_left_in_queue(Q_waiting,t);
+        sumar_tiempo_espera_procesos(Q_waiting, Q_ready, minimo_tiempo_waiting);
+        ready_up_waitersrr(Q_waiting, Q_ready, t, minimo_tiempo_waiting);
+        t += minimo_tiempo_waiting;
+        CPU = pop_queue(Q_ready);
+        CPU -> start_time_in_cpu = t;
+        CPU -> num_veces_elegido += 1;
+        if (CPU -> tareas[CPU -> pos_tarea_actual] <= q(CPU -> priority, q_entregado)){
+          L = CPU -> tareas[CPU -> pos_tarea_actual];
+          CPU -> tareas[CPU -> pos_tarea_actual] = 0;
+        }
+        else{
+          CPU -> tareas[CPU -> pos_tarea_actual] -= q(CPU -> priority, q_entregado);
+          L = q(CPU -> priority, q_entregado);
+        }
+
+        if (CPU -> num_veces_elegido == 1){
+          CPU -> end_response_time = t;
+        }
+        printf("Proceso activo %s lleva %i y le faltan %i intervalos de tiempo \n", CPU -> name, t - CPU -> start_time_in_cpu, CPU -> tareas[CPU -> pos_tarea_actual] - (t - CPU -> start_time_in_cpu));
+      }
+      printf("Proceso %s elgido para ejecutar en la CPU\n", CPU -> name);
     }
-    else{
-      printf("CPU %s\n", "NULL");
+
+    int remaining_time_CPU = (L + CPU -> start_time_in_cpu) - t;
+    int remaining_time_first_waiting = find_min_waiting_time_left_in_queue(Q_waiting, t);
+
+    // Si proxima accion es sacar de la CPU
+    if (remaining_time_CPU < remaining_time_first_waiting) {
+      printf("Proceso activo %s lleva %i y le faltan %i intervalos de tiempo \n", CPU -> name, t - CPU -> start_time_in_cpu, CPU -> tareas[CPU -> pos_tarea_actual] - (t - CPU -> start_time_in_cpu));
+      t += remaining_time_CPU;
+      CPU -> start_time_in_waiting = t;
+      if (CPU -> tareas[CPU -> pos_tarea_actual] == 0){
+        if (2*(CPU -> N) == CPU -> pos_tarea_actual){
+          push_queue(Q_terminated, CPU);
+          printf("Proceso %s termina su ejecucion\n", CPU -> name);
+          CPU -> end_turnaround_time = t;
+          CPU = NULL;
+        }
+        else{
+          push_queue(Q_waiting, CPU);
+          CPU -> num_veces_bloqueado += 1;
+          CPU -> pos_tarea_actual += 1;
+          CPU = NULL;
+        }
+      }
+      else{
+        push_queue(Q_waiting, CPU);
+        CPU -> start_time_in_ready = t;
+        CPU = NULL;
+      }
+      // Si se acabaron las tareas, se va a terminated, sino a waiting
+
+      sumar_tiempo_espera_procesos(Q_waiting, Q_ready, remaining_time_CPU);
+
+    } // Si proxima accion es mover desde waiting a ready
+    else if (remaining_time_CPU > remaining_time_first_waiting){
+      ready_up_waitersrr(Q_waiting, Q_ready, t, remaining_time_first_waiting);
+      printf("Proceso activo %s lleva %i y le faltan %i intervalos de tiempo \n", CPU -> name, t - CPU -> start_time_in_cpu, CPU -> tareas[CPU -> pos_tarea_actual] - (t - CPU -> start_time_in_cpu));
+      sumar_tiempo_espera_procesos(Q_waiting, Q_ready, remaining_time_first_waiting);
+      t += remaining_time_first_waiting;
+    }
+    else{ // Si proxima accion es mover desde waiting a ready y cambiar proceso de la CPU
+      ready_up_waitersrr(Q_waiting, Q_ready, t, remaining_time_first_waiting);
+      printf("Proceso activo %s lleva %i y le faltan %i intervalos de tiempo \n", CPU -> name, t - CPU -> start_time_in_cpu, CPU -> tareas[CPU -> pos_tarea_actual] - (t - CPU -> start_time_in_cpu));
+      t += remaining_time_CPU;
+      CPU -> start_time_in_waiting = t;
+      if (CPU -> tareas[CPU -> pos_tarea_actual] == 0){
+        CPU -> pos_tarea_actual += 1;
+      }
+      sumar_tiempo_espera_procesos(Q_waiting, Q_ready, remaining_time_CPU);
+      // Si se acabaron las tareas, se va a terminated, sino a waiting
+      if (2*(CPU -> N) == CPU -> pos_tarea_actual){
+        push_queue(Q_terminated, CPU);
+        printf("Proceso %s termina su ejecucion\n", CPU -> name);
+        CPU -> end_turnaround_time = t;
+        ready_up_waitersrr(Q_waiting, Q_ready, t, remaining_time_first_waiting);
+        CPU = NULL;
+      }
+      else{
+        push_queue(Q_waiting, CPU);
+        ready_up_waitersrr(Q_waiting, Q_ready, t, remaining_time_first_waiting);
+        CPU -> num_veces_bloqueado += 1;
+        CPU = NULL;
+
+      }
     }
   }
   printf("-----Simulacion terminada-----\n");
@@ -432,25 +607,138 @@ void FCFS(Queue* Q_ready, Queue* Q_waiting, Queue* Q_terminated) // Tipo 1
 
 }
 
-void RR(Queue* Q_ready, Queue* Q_waiting, Queue* Q_terminated) // Tipo 2
-{
-
-
-}
-
 void priority(Queue* Q_ready, Queue* Q_waiting, Queue* Q_terminated) // Tipo 3
 {
+  extern int t;
+  t = 0;
+  Process* CPU = NULL;
 
+  Q_waiting = sort_by_priority(Q_waiting);
+
+  while (Q_ready -> first != NULL || Q_waiting -> first != NULL || CPU != NULL){ // Se va a caer cuando el ultimo proceso este en la CPU
+    if (CPU == NULL){
+      if (Q_ready -> first != NULL){
+        Q_ready = sort_by_priority(Q_ready);
+        CPU = pop_queue(Q_ready);
+        CPU -> start_time_in_cpu = t;
+        CPU -> num_veces_elegido += 1;
+        if (CPU -> num_veces_elegido == 1){
+          CPU -> end_response_time = t;
+        }
+      }
+      else{
+        int minimo_tiempo_waiting = find_min_waiting_time_left_in_queue(Q_waiting,t);
+        sumar_tiempo_espera_procesos(Q_waiting, Q_ready, minimo_tiempo_waiting);
+        ready_up_waiters(Q_waiting, Q_ready, t, minimo_tiempo_waiting);
+        t += minimo_tiempo_waiting;
+        Q_ready = sort_by_priority(Q_ready);
+        CPU = pop_queue(Q_ready);
+        CPU -> start_time_in_cpu = t;
+        CPU -> num_veces_elegido += 1;
+        if (CPU -> num_veces_elegido == 1){
+          CPU -> end_response_time = t;
+        }
+        printf("Proceso activo %s lleva %i y le faltan %i intervalos de tiempo \n", CPU -> name, t - CPU -> start_time_in_cpu, CPU -> tareas[CPU -> pos_tarea_actual] - (t - CPU -> start_time_in_cpu));
+      }
+      printf("Proceso %s elgido para ejecutar en la CPU\n", CPU -> name);
+    }
+
+    int remaining_time_CPU = (CPU -> tareas[CPU -> pos_tarea_actual] + CPU -> start_time_in_cpu) - t;
+    int remaining_time_first_waiting = find_min_waiting_time_left_in_queue(Q_waiting, t);
+
+    // Si proxima accion es sacar de la CPU
+    if (remaining_time_CPU < remaining_time_first_waiting) {
+      printf("Proceso activo %s lleva %i y le faltan %i intervalos de tiempo \n", CPU -> name, t - CPU -> start_time_in_cpu, CPU -> tareas[CPU -> pos_tarea_actual] - (t - CPU -> start_time_in_cpu));
+      t += remaining_time_CPU;
+      CPU -> start_time_in_waiting = t;
+      CPU -> pos_tarea_actual += 1;
+      // Si se acabaron las tareas, se va a terminated, sino a waiting
+
+      sumar_tiempo_espera_procesos(Q_waiting, Q_ready, remaining_time_CPU);
+      if (2*(CPU -> N) == CPU -> pos_tarea_actual){
+        push_queue(Q_terminated, CPU);
+        printf("Proceso %s termina su ejecucion\n", CPU -> name);
+        CPU -> end_turnaround_time = t;
+        CPU = NULL;
+      }
+      else{
+        push_queue(Q_waiting, CPU);
+        CPU -> num_veces_bloqueado += 1;
+        CPU = NULL;
+      }
+    } // Si proxima accion es mover desde waiting a ready
+    else if (remaining_time_CPU > remaining_time_first_waiting){
+      ready_up_waiters(Q_waiting, Q_ready, t, remaining_time_first_waiting);
+      printf("Proceso activo %s lleva %i y le faltan %i intervalos de tiempo \n", CPU -> name, t - CPU -> start_time_in_cpu, CPU -> tareas[CPU -> pos_tarea_actual] - (t - CPU -> start_time_in_cpu));
+      sumar_tiempo_espera_procesos(Q_waiting, Q_ready, remaining_time_first_waiting);
+      t += remaining_time_first_waiting;
+    }
+    else{ // Si proxima accion es mover desde waiting a ready y cambiar proceso de la CPU
+      ready_up_waiters(Q_waiting, Q_ready, t, remaining_time_first_waiting);
+      printf("Proceso activo %s lleva %i y le faltan %i intervalos de tiempo \n", CPU -> name, t - CPU -> start_time_in_cpu, CPU -> tareas[CPU -> pos_tarea_actual] - (t - CPU -> start_time_in_cpu));
+      t += remaining_time_CPU;
+      CPU -> start_time_in_waiting = t;
+      CPU -> pos_tarea_actual += 1;
+      sumar_tiempo_espera_procesos(Q_waiting, Q_ready, remaining_time_CPU);
+      // Si se acabaron las tareas, se va a terminated, sino a waiting
+      if (2*(CPU -> N) == CPU -> pos_tarea_actual){
+        push_queue(Q_terminated, CPU);
+        printf("Proceso %s termina su ejecucion\n", CPU -> name);
+        CPU -> end_turnaround_time = t;
+        ready_up_waiters(Q_waiting, Q_ready, t, remaining_time_first_waiting);
+        CPU = NULL;
+      }
+      else{
+        push_queue(Q_waiting, CPU);
+        ready_up_waiters(Q_waiting, Q_ready, t, remaining_time_first_waiting);
+        CPU -> num_veces_bloqueado += 1;
+        CPU = NULL;
+
+      }
+    }
+  }
+  printf("-----Simulacion terminada-----\n");
+  printf("%i procesos han terminado su ejecucion\n", len_queue(Q_terminated));
+  printf("La simulacion duro %i\n", t);
+  printf("Para cada proceso: \n");
+  find_parameter_processes_in_queue(Q_terminated, "num_veces_elegido");
+  find_parameter_processes_in_queue(Q_ready, "num_veces_elegido");
+  find_parameter_processes_in_queue(Q_waiting, "num_veces_elegido");
+  find_parameter_processes_in_queue(Q_terminated, "num_veces_bloqueado");
+  find_parameter_processes_in_queue(Q_ready, "num_veces_bloqueado");
+  find_parameter_processes_in_queue(Q_waiting, "num_veces_bloqueado");
+  find_parameter_processes_in_queue(Q_terminated, "turnaround_time");
+  find_parameter_processes_in_queue(Q_terminated, "response_time");
+  find_parameter_processes_in_queue(Q_ready, "response_time");
+  find_parameter_processes_in_queue(Q_waiting, "response_time");
+  find_parameter_processes_in_queue(Q_terminated, "waiting_time");
+  find_parameter_processes_in_queue(Q_ready, "waiting_time");
+  find_parameter_processes_in_queue(Q_waiting, "waiting_time");
 
 }
 
 void  INThandler(int sig)
 {
-
-  printf("aaaaa terminandooo");
+  printf("\n");
+  printf("-----Simulacion terminada-----\n");
+  printf("%i procesos han terminado su ejecucion\n", len_queue(Q_terminated));
+  printf("La simulacion duro %i\n", t);
+  printf("Para cada proceso: \n");
+  find_parameter_processes_in_queue(Q_terminated, "num_veces_elegido");
+  find_parameter_processes_in_queue(Q_ready, "num_veces_elegido");
+  find_parameter_processes_in_queue(Q_waiting, "num_veces_elegido");
+  find_parameter_processes_in_queue(Q_terminated, "num_veces_bloqueado");
+  find_parameter_processes_in_queue(Q_ready, "num_veces_bloqueado");
+  find_parameter_processes_in_queue(Q_waiting, "num_veces_bloqueado");
+  find_parameter_processes_in_queue(Q_terminated, "turnaround_time");
+  find_parameter_processes_in_queue(Q_terminated, "response_time");
+  find_parameter_processes_in_queue(Q_ready, "response_time");
+  find_parameter_processes_in_queue(Q_waiting, "response_time");
+  find_parameter_processes_in_queue(Q_terminated, "waiting_time");
+  find_parameter_processes_in_queue(Q_ready, "waiting_time");
+  find_parameter_processes_in_queue(Q_waiting, "waiting_time");
 
   exit(0);
-
 }
 
 
@@ -459,9 +747,14 @@ int main(int argc, char const *argv[]) {
   const char* scheduler_type;
   const char* file_name;
   int quantum;
-  Queue* Q_ready = queue_init();
-  Queue* Q_waiting = queue_init();
-  Queue* Q_terminated = queue_init();
+
+  extern Queue* Q_ready;
+  Q_ready = queue_init();
+  extern Queue* Q_waiting;
+  Q_waiting = queue_init();
+  extern Queue* Q_terminated;
+  Q_terminated = queue_init();
+
   FILE* file;
   if (argv[1]){
     scheduler_type = argv[1];
@@ -509,7 +802,7 @@ int main(int argc, char const *argv[]) {
     quantum = atoi(argv[3]);
   }
   else{
-    quantum = 0;
+    quantum = 3;
   }
 
   Queue* queue_ordenada = sort_by_priority(Q_ready);
@@ -517,13 +810,13 @@ int main(int argc, char const *argv[]) {
   char* parametro = "priority";
   find_parameter_processes_in_queue(queue_ordenada, parametro);
   //FCFS(Q_ready, Q_waiting, Q_terminated);
-  if (strncmp(scheduler_type, "fcfs", 4) ==0){
+  if (strncmp(scheduler_type, "fcfs", 4) == 0){
     FCFS(Q_ready, Q_waiting, Q_terminated);
   }
-  if (strncmp(scheduler_type, "roundrobin", 4) ==0){
-    RR(Q_ready, Q_waiting, Q_terminated);
+  if (strncmp(scheduler_type, "roundrobin", 4) == 0){
+    RR(Q_ready, Q_waiting, Q_terminated, quantum);
   }
-  if (strncmp(scheduler_type, "priority", 4) ==0){
+  if (strncmp(scheduler_type, "priority", 4) == 0){
     priority(Q_ready, Q_waiting, Q_terminated);
   }
 
