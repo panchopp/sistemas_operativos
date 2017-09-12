@@ -1,0 +1,15 @@
+README
+
+Autores: Tomás Morales y Francisco Pérez
+
+Decisiones de diseño:
+
+    - Utilizamos una función scheduler para cada tipo de scheduler diferente para facilitar la corrección
+
+Supuestos adicionales:
+
+    - Supusimos que para el priority based scheduler, cada vez que se iba a seleccionar un proceso que estuviese en estado ready, se seleccionaria el con mayor prioridad (mientras menor el numero, mayor prioridad)
+
+    - Supusimos para el round robin que lo que hace el scheduler es:
+
+        - Correr en la CPU el proceso por el minimo entre los tiempo de Qk y tiempo requerido para la tarea
