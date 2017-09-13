@@ -8,7 +8,7 @@
 struct Cell
 {
   int estado; // 1: Viva, 0: Muerta
-	int pos_x;
+  int pos_x;
   int pos_y;
 
 };
@@ -16,11 +16,11 @@ typedef struct Cell Cell;
 
 Cell* cell_init(int estado, int pos_x, int pos_y)
 {
-	Cell* ret = (Cell*)malloc(sizeof(Cell));
-	ret -> estado = estado;
+  Cell* ret = (Cell*)malloc(sizeof(Cell));
+  ret -> estado = estado;
   ret -> pos_x = pos_x;
   ret -> pos_y = pos_y;
-	return ret;
+  return ret;
 }
 
 // struct Matrix
@@ -34,7 +34,7 @@ Cell* cell_init(int estado, int pos_x, int pos_y)
 
 // Matrix* matrix_init(int N, int M)
 // {
-// 	Matrix* ret = (Matrix*)malloc(sizeof(Matrix));
+//  Matrix* ret = (Matrix*)malloc(sizeof(Matrix));
 //   ret -> N = N;
 //   ret -> M = M;
 //   Cell** matriz = (Cell**)malloc(M*sizeof(int));
@@ -46,7 +46,7 @@ Cell* cell_init(int estado, int pos_x, int pos_y)
 //     }
 //   }
 //   ret -> matriz = matriz;
-// 	return ret;
+//  return ret;
 // }
 
 
@@ -68,10 +68,11 @@ int main(int argc, char const *argv[]) {
     //Matrix* matriz = matrix_init(fils, cols);
 
     //Aca se hace la matriz inicializada con puras Cell creadas con el cell init (Parten en estado 0, muertas)
-    Cell** matriz = (Cell**)malloc(cols*sizeof(int));
-    for (int x = 0; x < cols; x++){
-      matriz[x] = (Cell*)malloc(fils*sizeof(int));
-      for (int y = 0; y < fils; y++){
+
+    Cell** matriz = (Cell**)malloc(fils*sizeof(Cell*));
+    for (int x = 0; x < fils; x++){
+      matriz[x] = (Cell*)malloc(cols*sizeof(Cell));
+      for (int y = 0; y < cols; y++){
         matriz[x][y] = *cell_init(0, x, y);
 
       }
@@ -89,8 +90,6 @@ int main(int argc, char const *argv[]) {
 
       // Asi se asignan valores a la celda
       matriz[x][y].estado = 1;
-      matriz[x][y].pos_x = x;
-      matriz[x][y].pos_y = y;
     }
 
     for (int x = 0; x < fils; x++){
@@ -99,7 +98,7 @@ int main(int argc, char const *argv[]) {
 
         // ACA SE ESTA IMPRIMIENDO ALGO RARO, NOSE PORQUE PASA, ES COMO QUE SE IMPRIMIERA EN LA POSICION 0,0 EL PUNTERO A ALGO,
         // CUANDO DEBERIA SER SU COORDENADA X, O Y.
-        printf("(%i,%i) ", matriz[y][x].pos_y, matriz[y][x].pos_x);
+        printf("%i ", matriz[x][y].estado);
       }
       printf("\n");
     }
@@ -107,3 +106,6 @@ int main(int argc, char const *argv[]) {
 
 
   }
+
+
+
