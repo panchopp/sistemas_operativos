@@ -15,14 +15,16 @@ int main(int argc, char const *argv[]) {
   int last_exit_code = 0;
   char* path = NULL;
   char* word;
-  char line[1024];
   char* args[1024];
+
 
   while(1){
     printf ("Ingrese un comando: ");
+    char line[1024];
 
     // Se lee comando ingresado por usuario
-    scanf("%[^\n]s", line);
+    scanf("%[^\n\r]", line);
+
     word = strtok(line, " ");
 
     // Si ingresa exit, el programa termina
@@ -74,17 +76,24 @@ int main(int argc, char const *argv[]) {
 
       pid_t pid = fork();
       printf("%i\n", pid);
-      //Aca se ejecuta el proceso hijo con los parametros leidos del comando ingresado
+      // Aca se ejecuta el proceso hijo con los parametros leidos del comando ingresado
       if (pid==0){ // Si es hijo
         execv(args[0], args);
+        //exit(0);
       }
-      else{ // Si es padre
+      else if (pid > 0){ // Si es padre
         // Aca espera al hijo
         waitpid(pid, 0, 0);
       }
+      else{
+        printf("FAIL!!!\n");
+      }
     }
     // Esto deberiamos sacarlo, el exit y dejar que siga el loop y pida un nuevo comando, pero se cae nose porque :/
-    exit(0);
+    //exit(0);
+    char c;
+    while ((c = getchar()) != '\n' && c != EOF) { }
+
   }
 
   return 0;
