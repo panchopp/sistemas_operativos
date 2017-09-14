@@ -117,7 +117,7 @@ int main(int argc, char const *argv[]) {
       // Asi se asignan valores a la celda
       matriz[x * fils + y].estado = 1;
     }
-    int pids[n_cpu];
+    int pids_workers[n_cpu];
     for(int i = 0; i < n_cpu; i++){
         printf("%s\n", "a");
         int j = fork();
@@ -131,14 +131,14 @@ int main(int argc, char const *argv[]) {
             worker(matriz, fils, cols, num_threads, n_cpu, celdas_proceso);
           }
           else{
-            pids[i] = j;
+            pids_workers[i] = j;
           }
         }
     //printf("Parent waiting...\n");
 
     for(int i = 0; i < n_cpu; i++){
-      printf("Master waiting for worker with pid: %i\n", pids[i]);
-        waitpid(pids[i], 0, 0);
+      printf("Master waiting for worker with pid: %i\n", pids_workers[i]);
+        waitpid(pids_workers[i], 0, 0);
     }
 
 

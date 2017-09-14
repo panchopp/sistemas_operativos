@@ -13,7 +13,7 @@ int main(int argc, char const *argv[]) {
 
   char* prompt = "";
   int last_exit_code = 0;
-  char* path = NULL;
+  char* path = "";
   char* word;
   char* args[1024];
 
@@ -24,6 +24,12 @@ int main(int argc, char const *argv[]) {
 
     // Se lee comando ingresado por usuario
     scanf("%[^\n\r]", line);
+
+    char buf[2048];
+    snprintf(buf, sizeof buf, "%s%s%s", prompt, path, line);
+
+    printf("Prompt before %s\n", prompt);
+    strcpy(line, buf);
 
     word = strtok(line, " ");
 
@@ -72,21 +78,60 @@ int main(int argc, char const *argv[]) {
         word = strtok(NULL, " ");
         i += 1;
       }
-      args[i] = word;
 
-      pid_t pid = fork();
-      printf("%i\n", pid);
-      // Aca se ejecuta el proceso hijo con los parametros leidos del comando ingresado
-      if (pid==0){ // Si es hijo
-        execv(args[0], args);
-        //exit(0);
+
+      args[i] = word;
+      char* last_argument = args[i-1];
+      printf("Last argument: %s\n", last_argument);
+      int has_ampersand = 0;
+      if (strstr(last_argument, "&") != NULL){
+        printf("Has ampersand!!!!!!\n");
+        has_ampersand = 1;
       }
-      else if (pid > 0){ // Si es padre
-        // Aca espera al hijo
-        waitpid(pid, 0, 0);
+
+      int n_veces_paralelo = 1;
+      char* n_veces_paralelo_string = strtok(last_argument, "&");
+      if (has_ampersand == 1){
+        if (strlen(last_argument) > 1){
+          n_veces_paralelo = atoi(n_veces_paralelo_string);
+        }
+        else{
+          //
+        }
+        args[i-1] = NULL;
       }
-      else{
-        printf("FAIL!!!\n");
+
+      int pids_workers[n_veces_paralelo];
+
+      printf("dd\n");
+      // Borramos argumento &numero
+
+      printf("ee\n");
+
+      for (int j = 0; j < n_veces_paralelo; j++){
+        pid_t pid = fork();
+        pids_workers[j] = pid;
+        printf("%i\n", pid);
+        // Aca se ejecuta el proceso hijo con los parametros leidos del comando ingresado
+        if (pid==0){ // Si es hijo
+          printf("En hijo, voy a ejecutar %s\n", args[0]);
+          execv(args[0], args);
+          //exit(0);
+        }
+        else if (pid > 0){ // Si es padre
+          if (has_ampersand == 1){
+            //printf("En padre, con ampersand\n");
+            //waitpid(pids_workers[j], 0, 0);
+          }
+          else{
+            //printf("En padre, sin ampersand\n");
+            // Aca espera al hijo
+            waitpid(pids_workers[j], 0, 0);
+          }
+        }
+        else{
+          printf("FAIL!!!\n");
+        }
       }
     }
     // Esto deberiamos sacarlo, el exit y dejar que siga el loop y pida un nuevo comando, pero se cae nose porque :/
