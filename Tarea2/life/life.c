@@ -41,53 +41,56 @@ typedef struct _thread_data_t {
 void *manipulatematrix(void* arg){
   thread_data_t *data = (thread_data_t *)arg;
   //printf("Thread %i de proceso %i : %d\n", data->tid, data->pid, (data -> celdas)[0]);
-  for (int q = 0; q < sizeof(data -> celdas)/sizeof(int); q++){
-    int count = 0;
-    if ((data -> celdas)[q] + 1 < (data -> fils)*(data -> cols) && (data -> celdas)[q] + 1 >= 0 && ((data -> celdas)[q] + 1)%(data -> cols) != 0){
-      count += (data -> matriz_copia)[(data -> celdas)[q] + 1].estado;
-    }
-
-    if ((data -> celdas)[q] - 1 < (data -> fils)*(data -> cols) && (data -> celdas)[q] - 1 >= 0 && ((data -> celdas)[q])%(data -> cols) != 0){
-      count += (data -> matriz_copia)[(data -> celdas)[q] - 1].estado;
-    }
-
-    if (((data -> celdas)[q] + data -> cols < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] + data -> cols >= 0)){
-      count += (data -> matriz_copia)[(data -> celdas)[q] + data -> cols].estado;
-    }
-
-    if (((data -> celdas)[q] - data -> cols < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] - data -> cols >= 0)){
-      count += (data -> matriz_copia)[(data -> celdas)[q] - data -> cols].estado;
-    }
-
-    if (((data -> celdas)[q] + data -> cols + 1 < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] + data -> cols + 1 >= 0) && ((data -> celdas)[q] + 1)%(data -> cols) != 0){
-      count += (data -> matriz_copia)[(data -> celdas)[q] + data -> cols + 1].estado;
-    }
-
-    if (((data -> celdas)[q] + data -> cols - 1 < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] + data -> cols - 1 >= 0) && ((data -> celdas)[q])%(data -> cols) != 0){
-      count += (data -> matriz_copia)[(data -> celdas)[q] + data -> cols - 1].estado;
-    }
-
-    if (((data -> celdas)[q] - data -> cols + 1 < (data -> fils)*(data -> cols)) && (data -> celdas)[q] - data -> cols + 1 >= 0 && ((data -> celdas)[q] + 1)%(data -> cols) != 0){
-      count += (data -> matriz_copia)[(data -> celdas)[q] - data -> cols + 1].estado;
-    }
-
-    if (((data -> celdas)[q] - data -> cols - 1 < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] - data -> cols - 1 >= 0) && ((data -> celdas)[q])%(data -> cols) != 0){
-      count += (data -> matriz_copia)[(data -> celdas)[q] - data -> cols - 1].estado;
-    }
-    
-    if ((data -> matriz_copia)[(data -> celdas)[q]].estado == 0){
-      //printf("%i\n", count);
-      if (count == 3){
-        (data -> matriz_copia)[(data -> celdas)[q]].cambia = 1;
+  for (int q = 0; q <= sizeof(data -> celdas)/sizeof(int); q++){
+    if (((q > 0) && (data -> celdas)[q] != 0) || q == 0){
+      int count = 0;
+      if ((data -> celdas)[q] + 1 < (data -> fils)*(data -> cols) && (data -> celdas)[q] + 1 >= 0 && ((data -> celdas)[q] + 1)%(data -> cols) != 0){
+        count += (data -> matriz_copia)[(data -> celdas)[q] + 1].estado;
       }
-    }
 
-    else{
-      if (count < 2 || count > 3){
-        (data -> matriz_copia)[(data -> celdas)[q]].cambia = 1;
+      if ((data -> celdas)[q] - 1 < (data -> fils)*(data -> cols) && (data -> celdas)[q] - 1 >= 0 && ((data -> celdas)[q])%(data -> cols) != 0){
+        count += (data -> matriz_copia)[(data -> celdas)[q] - 1].estado;
+      }
+
+      if (((data -> celdas)[q] + data -> cols < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] + data -> cols >= 0)){
+        count += (data -> matriz_copia)[(data -> celdas)[q] + data -> cols].estado;
+      }
+
+      if (((data -> celdas)[q] - data -> cols < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] - data -> cols >= 0)){
+        count += (data -> matriz_copia)[(data -> celdas)[q] - data -> cols].estado;
+      }
+
+      if (((data -> celdas)[q] + data -> cols + 1 < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] + data -> cols + 1 >= 0) && ((data -> celdas)[q] + 1)%(data -> cols) != 0){
+        count += (data -> matriz_copia)[(data -> celdas)[q] + data -> cols + 1].estado;
+      }
+
+      if (((data -> celdas)[q] + data -> cols - 1 < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] + data -> cols - 1 >= 0) && ((data -> celdas)[q])%(data -> cols) != 0){
+        count += (data -> matriz_copia)[(data -> celdas)[q] + data -> cols - 1].estado;
+      }
+
+      if (((data -> celdas)[q] - data -> cols + 1 < (data -> fils)*(data -> cols)) && (data -> celdas)[q] - data -> cols + 1 >= 0 && ((data -> celdas)[q] + 1)%(data -> cols) != 0){
+        count += (data -> matriz_copia)[(data -> celdas)[q] - data -> cols + 1].estado;
+      }
+
+      if (((data -> celdas)[q] - data -> cols - 1 < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] - data -> cols - 1 >= 0) && ((data -> celdas)[q])%(data -> cols) != 0){
+        count += (data -> matriz_copia)[(data -> celdas)[q] - data -> cols - 1].estado;
+      }
+      
+      if ((data -> matriz_copia)[(data -> celdas)[q]].estado == 0){
+        //printf("%i\n", count);
+        if (count == 3){
+          (data -> matriz_copia)[(data -> celdas)[q]].cambia = 1;
+        }
+      }
+
+      else{
+        if (count < 2 || count > 3){
+          (data -> matriz_copia)[(data -> celdas)[q]].cambia = 1;
+        }
       }
     }
   }
+    
 
   pthread_exit("Exit");
   return 0;
@@ -215,8 +218,10 @@ void worker(Cell *matriz, const int fils, const int cols, const int num_threads,
     for (int i = 0; i < num_threads; i++) {
       lista_args[i].celdas = (int *)malloc(ceil((float)sizeof(celdas_proceso)/(float)num_threads));
       lista_args[i].tid = i;
-      for (int c = i; c <= (sizeof(celdas_proceso)/sizeof(int)) - 1; c += num_threads){
-        lista_args[i].celdas[(c-i)/num_threads] = celdas_proceso[c];
+      for (int c = i; c <= (sizeof(celdas_proceso)/sizeof(int)); c += num_threads){
+        if ((celdas_proceso[c] != 0 && c > 0) ||(c == 0)){
+          lista_args[i].celdas[(c-i)/num_threads] = celdas_proceso[c];
+        }
       }
       status = pthread_create(&threads[i], NULL, manipulatematrix, &lista_args[i]);
       if (status != 0) {
