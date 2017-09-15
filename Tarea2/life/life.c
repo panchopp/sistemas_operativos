@@ -168,49 +168,60 @@ int main(int argc, char const *argv[]) {
       // Asi se asignan valores a la celda
       matriz[x * fils + y].estado = 1;
     }
-    int pids_workers[n_cpu];
-    for(int i = 0; i < n_cpu; i++){
-        int j = fork();
-        if(j != 0){
-            int *celdas_proceso = (int *)malloc(sizeof(int) * ceil((float)fils*cols/(float)n_cpu));
-            for (int c = i; c <= fils*cols - 1; c += n_cpu){
-              celdas_proceso[c/n_cpu] = c;
+
+
+    while (iteraciones > 0){
+      int pids_workers[n_cpu];
+      for(int i = 0; i < n_cpu; i++){
+          int j = fork();
+          if(j != 0){
+              int *celdas_proceso = (int *)malloc(sizeof(int) * ceil((float)fils*cols/(float)n_cpu));
+              for (int c = i; c <= fils*cols - 1; c += n_cpu){
+                celdas_proceso[c/n_cpu] = c;
+              }
+              //printf("Worker with pid: %i\n", getpid());
+              pids_workers[i] = getpid();
+              worker(matriz, fils, cols, num_threads, n_cpu, celdas_proceso);
             }
-            //printf("Worker with pid: %i\n", getpid());
-            worker(matriz, fils, cols, num_threads, n_cpu, celdas_proceso);
           }
-          else{
-            pids_workers[i] = j;
-          }
-        }
-    //printf("Parent waiting...\n");
+      //printf("Parent waiting...\n");
 
-    for(int i = 0; i < n_cpu; i++){
-      //printf("Master waiting for worker with pid: %i\n", pids_workers[i]);
-        waitpid(pids_workers[i], 0, 0);
-    }
+      for(int i = 0; i < n_cpu; i++){
+        //printf("Master waiting for worker with pid: %i\n", pids_workers[i]);
+          waitpid(pids_workers[i], 0, 0);
+      }
+
+      wait(NULL);
 
 
-    for (int x = 0; x < fils; x++){
-      for (int y = 0; y < cols; y++){
-        if (matriz[x * fils + y].cambia == 1){
-          if (matriz[x * fils + y].estado == 0){
-            matriz[x * fils + y].estado = 1;
-          }
-          else{
-            matriz[x * fils + y].estado = 0;
+      printf("%s\n", "HOLA");
+      for (int x = 0; x < fils; x++){
+        for (int y = 0; y < cols; y++){
+          if (matriz[x * fils + y].cambia == 1){
+            if (matriz[x * fils + y].estado == 0){
+              matriz[x * fils + y].estado = 1;
+            }
+            else{
+              matriz[x * fils + y].estado = 0;
+            }
+
+            matriz[x * fils + y].cambia = 0;
+            
           }
         }
       }
-    }
 
-    // Imprimimos el resultado de la matriz
-    for (int x = 0; x < fils; x++){
-      for (int y = 0; y < cols; y++){
-        // Aca lee datos de la celda, ejemplo como para imprimir.
-        printf("%i ", matriz[x * fils + y].estado);
+      // Imprimimos el resultado de la matriz
+      for (int x = 0; x < fils; x++){
+        for (int y = 0; y < cols; y++){
+          // Aca lee datos de la celda, ejemplo como para imprimir.
+          printf("%i ", matriz[x * fils + y].estado);
+        }
+        printf("\n");
       }
-      printf("\n");
+
+      iteraciones--;
+
     }
 
     return 0;

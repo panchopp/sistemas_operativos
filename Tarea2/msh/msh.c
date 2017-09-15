@@ -7,9 +7,29 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+int running_processes = 0;
+int pids_workers[1024];
 
+void INThandler(int);
+
+void  INThandler(int sig)
+{
+  printf("\n");
+  printf("-----Se apreto control c-----\n");
+  if (running_processes == 0){
+    printf("No running processes, terminating \n");
+    exit(0);
+
+  }
+  else{
+    printf("%i running processes, terminating process %i \n", running_processes, pids_workers[0]);
+    kill(pids_workers[0], SIGKILL);
+  }
+}
 
 int main(int argc, char const *argv[]) {
+
+  signal(SIGINT, INThandler);
 
   char* prompt = "";
   int last_exit_code = 0;
@@ -28,7 +48,6 @@ int main(int argc, char const *argv[]) {
     char buf[2048];
     snprintf(buf, sizeof buf, "%s%s%s", prompt, path, line);
 
-    printf("Prompt before %s\n", prompt);
     strcpy(line, buf);
 
     word = strtok(line, " ");
@@ -40,7 +59,6 @@ int main(int argc, char const *argv[]) {
     }
     // Si ingresa setPrompt, setea el prompt con el valor debido
     else if (strcmp(word, "setPrompt")==0){
-      printf("%s\n", "setPrompt");
       prompt = strtok(NULL," ");
       int length_prompt = strlen(prompt);
       for (int i = 0; i < length_prompt; i++){
@@ -62,18 +80,13 @@ int main(int argc, char const *argv[]) {
       }
     }
     else if (strcmp(word, "setPath")==0){
-      printf("%s\n", "setPath");
       path = strtok(NULL," ");
     }
     else {
-      printf ("You entered: %s\n", word);
-      printf ("prompt: %s\n", prompt);
-      printf ("path: %s\n", path);
 
       // Aca se extraen los parametros extras (arbitrarios) y se crea el args que es la forma de pasarle los parametros a la funcion llamada
       int i = 0;
       while (word){
-        printf("%s\n", "Entro while");
         args[i] = word;
         word = strtok(NULL, " ");
         i += 1;
@@ -82,10 +95,8 @@ int main(int argc, char const *argv[]) {
 
       args[i] = word;
       char* last_argument = args[i-1];
-      printf("Last argument: %s\n", last_argument);
       int has_ampersand = 0;
       if (strstr(last_argument, "&") != NULL){
-        printf("Has ampersand!!!!!!\n");
         has_ampersand = 1;
       }
 
@@ -101,36 +112,36 @@ int main(int argc, char const *argv[]) {
         args[i-1] = NULL;
       }
 
-      int pids_workers[n_veces_paralelo];
-
-      printf("dd\n");
-      // Borramos argumento &numero
-
-      printf("ee\n");
-
       for (int j = 0; j < n_veces_paralelo; j++){
         pid_t pid = fork();
         pids_workers[j] = pid;
-        printf("%i\n", pid);
         // Aca se ejecuta el proceso hijo con los parametros leidos del comando ingresado
         if (pid==0){ // Si es hijo
-          printf("En hijo, voy a ejecutar %s\n", args[0]);
+          running_processes += 1;
+//          printf("En hijo, voy a ejecutar %s\n", args[0]);
           execv(args[0], args);
           //exit(0);
         }
         else if (pid > 0){ // Si es padre
           if (has_ampersand == 1){
+            if (n_veces_paralelo == 1){
+                //
+            }
+            else{
+              waitpid(pids_workers[j], 0, 0);
+            }
             //printf("En padre, con ampersand\n");
-            //waitpid(pids_workers[j], 0, 0);
+            //
           }
           else{
             //printf("En padre, sin ampersand\n");
             // Aca espera al hijo
             waitpid(pids_workers[j], 0, 0);
+            running_processes -= 1;
           }
         }
         else{
-          printf("FAIL!!!\n");
+          // printf("FAIL!!!\n");
         }
       }
     }
