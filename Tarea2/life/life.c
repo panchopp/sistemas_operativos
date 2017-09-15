@@ -12,7 +12,6 @@ struct Cell
   int estado; // 1: Viva, 0: Muerta
   int pos_x;
   int pos_y;
-  int cambia;
 
 };
 typedef struct Cell Cell;
@@ -23,7 +22,6 @@ Cell* cell_init(int estado, int pos_x, int pos_y)
   ret -> estado = estado;
   ret -> pos_x = pos_x;
   ret -> pos_y = pos_y;
-  ret -> cambia = 0;
   return ret;
 }
 
@@ -32,7 +30,7 @@ void worker(Cell *matriz, const int fils, const int cols, const int num_threads,
 typedef struct _thread_data_t {
   int fils;
   int cols;
-  Cell *matriz_copia;
+  Cell *matriz;
   int *celdas;
   int tid;
   int pid;
@@ -41,54 +39,7 @@ typedef struct _thread_data_t {
 void *manipulatematrix(void* arg){
   thread_data_t *data = (thread_data_t *)arg;
   printf("Thread %i de proceso %i : %d\n", data->tid, data->pid, (data -> celdas)[0]);
-  //(data -> matriz_copia)[(data -> celdas)[0]].estado = 9;
-  for (int q = 0; q < sizeof(data -> celdas)/sizeof(int); q++){
-    int count = 0;
-    if ((data -> celdas)[q] + 1 < (data -> fils)*(data -> cols) && (data -> celdas)[q] + 1 >= 0){
-      count += (data -> matriz_copia)[(data -> celdas)[q] + 1].estado;
-    }
-
-    if ((data -> celdas)[q] - 1 < (data -> fils)*(data -> cols) && (data -> celdas)[q] - 1 >= 0){
-      count += (data -> matriz_copia)[(data -> celdas)[q] - 1].estado;
-    }
-
-    if (((data -> celdas)[q] + data -> cols < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] + data -> cols >= 0)){
-      count += (data -> matriz_copia)[(data -> celdas)[q] + data -> cols].estado;
-    }
-
-    if (((data -> celdas)[q] - data -> cols < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] - data -> cols >= 0)){
-      count += (data -> matriz_copia)[(data -> celdas)[q] - data -> cols].estado;
-    }
-
-    if (((data -> celdas)[q] + data -> cols + 1 < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] + data -> cols + 1 >= 0)){
-      count += (data -> matriz_copia)[(data -> celdas)[q] + data -> cols + 1].estado;
-    }
-
-    if (((data -> celdas)[q] + data -> cols - 1 < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] + data -> cols - 1 >= 0)){
-      count += (data -> matriz_copia)[(data -> celdas)[q] + data -> cols - 1].estado;
-    }
-
-    if (((data -> celdas)[q] - data -> cols + 1 < (data -> fils)*(data -> cols)) && (data -> celdas)[q] - data -> cols + 1 >= 0){
-      count += (data -> matriz_copia)[(data -> celdas)[q] - data -> cols + 1].estado;
-    }
-
-    if (((data -> celdas)[q] - data -> cols - 1 < (data -> fils)*(data -> cols)) && ((data -> celdas)[q] - data -> cols - 1 >= 0)){
-      count += (data -> matriz_copia)[(data -> celdas)[q] - data -> cols - 1].estado;
-    }
-    
-    if ((data -> matriz_copia)[(data -> celdas)[q]].estado == 0){
-      //printf("%i\n", count);
-      if (count == 3){
-        (data -> matriz_copia)[(data -> celdas)[q]].cambia = 1;
-      }
-    }
-
-    else{
-      if (count < 2 || count > 3){
-        (data -> matriz_copia)[(data -> celdas)[q]].cambia = 1;
-      }
-    }
-  }
+  (data -> matriz)[(data -> celdas)[0]].estado = 9;
   pthread_exit("Exit");
   return 0;
 }
@@ -168,60 +119,36 @@ int main(int argc, char const *argv[]) {
       // Asi se asignan valores a la celda
       matriz[x * fils + y].estado = 1;
     }
-
-
-    while (iteraciones > 0){
-      int pids_workers[n_cpu];
-      for(int i = 0; i < n_cpu; i++){
-          int j = fork();
-          if(j != 0){
-              int *celdas_proceso = (int *)malloc(sizeof(int) * ceil((float)fils*cols/(float)n_cpu));
-              for (int c = i; c <= fils*cols - 1; c += n_cpu){
-                celdas_proceso[c/n_cpu] = c;
-              }
-              //printf("Worker with pid: %i\n", getpid());
-              pids_workers[i] = getpid();
-              worker(matriz, fils, cols, num_threads, n_cpu, celdas_proceso);
+    int pids_workers[n_cpu];
+    for(int i = 0; i < n_cpu; i++){
+        int j = fork();
+        if(!j){
+            int *celdas_proceso = (int *)malloc(sizeof(int) * ceil((float)fils*cols/(float)n_cpu));
+            for (int c = i; c <= fils*cols - 1; c += n_cpu){
+              celdas_proceso[c/n_cpu] = c;
             }
-          }
-      //printf("Parent waiting...\n");
-
-      for(int i = 0; i < n_cpu; i++){
-        //printf("Master waiting for worker with pid: %i\n", pids_workers[i]);
-          waitpid(pids_workers[i], 0, 0);
-      }
-
-      wait(NULL);
-
-
-      printf("%s\n", "HOLA");
-      for (int x = 0; x < fils; x++){
-        for (int y = 0; y < cols; y++){
-          if (matriz[x * fils + y].cambia == 1){
-            if (matriz[x * fils + y].estado == 0){
-              matriz[x * fils + y].estado = 1;
-            }
-            else{
-              matriz[x * fils + y].estado = 0;
-            }
-
-            matriz[x * fils + y].cambia = 0;
-            
-          }
+            //printf("Worker with pid: %i\n", getpid());
+            worker(matriz, fils, cols, num_threads, n_cpu, celdas_proceso);
+        }
+        else{
+          pids_workers[i] = j;
         }
       }
+    //printf("Parent waiting...\n");
 
-      // Imprimimos el resultado de la matriz
-      for (int x = 0; x < fils; x++){
-        for (int y = 0; y < cols; y++){
-          // Aca lee datos de la celda, ejemplo como para imprimir.
-          printf("%i ", matriz[x * fils + y].estado);
-        }
-        printf("\n");
+    for(int i = 0; i < n_cpu; i++){
+      printf("Master waiting for worker with pid: %i\n", pids_workers[i]);
+        waitpid(pids_workers[i], 0, 0);
+    }
+
+
+    // Imprimimos el resultado de la matriz
+    for (int x = 0; x < fils; x++){
+      for (int y = 0; y < cols; y++){
+        // Aca lee datos de la celda, ejemplo como para imprimir.
+        printf("%i ", matriz[x * fils + y].estado);
       }
-
-      iteraciones--;
-
+      printf("\n");
     }
 
     return 0;
@@ -229,32 +156,23 @@ int main(int argc, char const *argv[]) {
 
 void worker(Cell *matriz, const int fils, const int cols, const int num_threads, const int n_cpu, int* celdas_proceso){
 
-    Cell* matriz_copia = (Cell*)malloc(fils*cols*sizeof(Cell*));
-    for (int x = 0; x < fils; x++){
-      for (int y = 0; y < cols; y++){
-        matriz_copia[x * fils + y] = *cell_init(matriz[x * fils + y].estado, x, y);
-      }
-    }
+    thread_data_t arg;
+    arg.fils = fils;
+    arg.cols = cols;
+    arg.matriz = matriz;
+    arg.pid = getpid();
 
-    thread_data_t lista_args[num_threads];
-    for (int a = 0; a < num_threads; a++){
-      thread_data_t arg;
-      arg.fils = fils;
-      arg.cols = cols;
-      arg.matriz_copia = matriz_copia;
-      arg.pid = getpid();
-      lista_args[a] = arg;
-    }
+    //printf("%lu %d\n", sizeof(celdas_proceso)/sizeof(int), celdas_proceso[2]);
 
     pthread_t threads[num_threads];
     int status;
     for (int i = 0; i < num_threads; i++) {
-      lista_args[i].celdas = (int *)malloc(ceil((float)sizeof(celdas_proceso)/(float)num_threads));
-      lista_args[i].tid = i;
+      arg.celdas = (int *)malloc(ceil((float)sizeof(celdas_proceso)/(float)num_threads));
+      arg.tid = i;
       for (int c = i; c <= (sizeof(celdas_proceso)/sizeof(int)) - 1; c += num_threads){
-        lista_args[i].celdas[(c-i)/num_threads] = celdas_proceso[c];
+        arg.celdas[(c-i)/num_threads] = celdas_proceso[c];
       }
-      status = pthread_create(&threads[i], NULL, manipulatematrix, &lista_args[i]);
+      status = pthread_create(&threads[i], NULL, manipulatematrix, &arg);
       if (status != 0) {
         printf("[main] Oops. pthread_create returned error code %d\n", status);
         exit(-1);
@@ -264,18 +182,14 @@ void worker(Cell *matriz, const int fils, const int cols, const int num_threads,
     for (int i = 0; i < num_threads; i++)
        pthread_join(threads[i], NULL);
 
-
-    // Cambios a matriz original
-
-    for (int x = 0; x < fils; x++){
-      for (int y = 0; y < cols; y++){
-        if (matriz_copia[x * fils + y].cambia == 1){
-          matriz[x * fils + y].cambia = 1;
-        }
-      }
-    }
-
-    printf("%s\n", "termine la wea!");
+    // printf("Hello, I'm the fork\n");
+    // for(int i = 0; i < fils; i++){
+    //   for(int j = 0; j < cols; j++){
+    //     if(i==2){
+    //       matriz[i * fils + j].estado = 6;
+    //     }
+    //   }
+    // }
 
     exit(0);
 }
