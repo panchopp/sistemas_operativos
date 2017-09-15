@@ -32,13 +32,15 @@ typedef struct _thread_data_t {
   int cols;
   Cell *matriz;
   int *celdas;
+  int tid;
+  int pid;
 } thread_data_t;
 
 void *manipulatematrix(void* arg){
   thread_data_t *data = (thread_data_t *)arg;
-  printf("%d\n", data -> celdas[1]);
-  //printf("hello from thr_func, thread id: %d\n", data->fils);
-  //printf("%s\n", "hi");
+  printf("Thread %i de proceso %i : %d\n", data->tid, data->pid, (data -> celdas)[0]);
+  (data -> matriz)[(data -> celdas)[0]].estado = 9;
+  pthread_exit("Exit");
   return 0;
 }
 
@@ -119,15 +121,13 @@ int main(int argc, char const *argv[]) {
     }
     int pids_workers[n_cpu];
     for(int i = 0; i < n_cpu; i++){
-        printf("%s\n", "a");
         int j = fork();
         if(!j){
-            int *celdas_proceso = (int *)malloc(sizeof(int) * round(fils*cols/n_cpu));
-            // for (int c = i; c <= fils*cols - 1; c += n_cpu){
-            //   celdas_proceso[c/n_cpu] = c;
-            // }
-            // printf("%d %i\n", celdas_proceso[2], i);
-            printf("Worker with pid: %i\n", getpid());
+            int *celdas_proceso = (int *)malloc(sizeof(int) * ceil((float)fils*cols/(float)n_cpu));
+            for (int c = i; c <= fils*cols - 1; c += n_cpu){
+              celdas_proceso[c/n_cpu] = c;
+            }
+            //printf("Worker with pid: %i\n", getpid());
             worker(matriz, fils, cols, num_threads, n_cpu, celdas_proceso);
           }
           else{
@@ -137,7 +137,7 @@ int main(int argc, char const *argv[]) {
     //printf("Parent waiting...\n");
 
     for(int i = 0; i < n_cpu; i++){
-      printf("Master waiting for worker with pid: %i\n", pids_workers[i]);
+      //printf("Master waiting for worker with pid: %i\n", pids_workers[i]);
         waitpid(pids_workers[i], 0, 0);
     }
 
@@ -146,9 +146,6 @@ int main(int argc, char const *argv[]) {
     for (int x = 0; x < fils; x++){
       for (int y = 0; y < cols; y++){
         // Aca lee datos de la celda, ejemplo como para imprimir.
-
-        // ACA SE ESTA IMPRIMIENDO ALGO RARO, NOSE PORQUE PASA, ES COMO QUE SE IMPRIMIERA EN LA POSICION 0,0 EL PUNTERO A ALGO,
-        // CUANDO DEBERIA SER SU COORDENADA X, O Y.
         printf("%i ", matriz[x * fils + y].estado);
       }
       printf("\n");
@@ -163,21 +160,27 @@ void worker(Cell *matriz, const int fils, const int cols, const int num_threads,
     arg.fils = fils;
     arg.cols = cols;
     arg.matriz = matriz;
+    arg.pid = getpid();
+
+    //printf("%lu %d\n", sizeof(celdas_proceso)/sizeof(int), celdas_proceso[2]);
 
     pthread_t threads[num_threads];
     int status;
     for (int i = 0; i < num_threads; i++) {
-      arg.celdas = (int *)malloc(round(sizeof(celdas_proceso)/num_threads));
-      for (int c = i; c <= fils*cols - 1; c += num_threads){
-        arg.celdas[c/num_threads] = celdas_proceso[c];
+      arg.celdas = (int *)malloc(ceil((float)sizeof(celdas_proceso)/(float)num_threads));
+      arg.tid = i;
+      for (int c = i; c <= (sizeof(celdas_proceso)/sizeof(int)) - 1; c += num_threads){
+        arg.celdas[(c-i)/num_threads] = celdas_proceso[c];
       }
-      //printf("[main] Creating thread %i\n", i);
       status = pthread_create(&threads[i], NULL, manipulatematrix, &arg);
       if (status != 0) {
         printf("[main] Oops. pthread_create returned error code %d\n", status);
         exit(-1);
           }
       }
+
+    for (int i = 0; i < num_threads; i++)
+       pthread_join(threads[i], NULL);
 
     // printf("Hello, I'm the fork\n");
     // for(int i = 0; i < fils; i++){
@@ -188,6 +191,5 @@ void worker(Cell *matriz, const int fils, const int cols, const int num_threads,
     //   }
     // }
 
-    //printf("Fork ended\n");
     exit(0);
 }
